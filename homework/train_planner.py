@@ -76,11 +76,10 @@ def train(
             waypoints_mask = batch["waypoints_mask"]
 
             pred = model(track_left, track_right)
-
             training_metrics.add(pred, waypoints, waypoints_mask)
-            metrics["train_loss"].append(loss.item())
 
             loss = loss_fn(pred, waypoints)
+            metrics["train_loss"].append(loss.item())
             
             optimizer.zero_grad()
             loss.backward()
