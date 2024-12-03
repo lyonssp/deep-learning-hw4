@@ -50,8 +50,8 @@ def train(
     val_data = load_data("drive_data/val", shuffle=False)
     
     # create loss function and optimizer
-    mse_loss = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn = torch.nn.L1Loss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     global_step = 0
     training_metrics = PlannerMetric()
@@ -75,7 +75,7 @@ def train(
 
             training_metrics.add(pred, waypoints, waypoints_mask)
 
-            loss = mse_loss(pred, waypoints)
+            loss = loss_fn(pred, waypoints)
             
             optimizer.zero_grad()
             loss.backward()
@@ -118,7 +118,7 @@ def train(
         logger.add_scalar("val_lateral_error", epoch_val_lateral_error, global_step)
 
         # print on first, last, every 10th epoch
-        if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
+        if epoch == 0 or epoch == num_epoch - 1 or epoch % 10 == 0:
             print(
                 f"Epoch {epoch + 1}/{num_epoch} "
                 f"Train L1 Error: {epoch_train_l1_error:.4f} "

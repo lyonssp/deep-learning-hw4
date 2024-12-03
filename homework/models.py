@@ -13,6 +13,7 @@ class MLPPlanner(nn.Module):
         self,
         n_track: int = 10,
         n_waypoints: int = 3,
+        layer_dims = [64, 64],
     ):
         """
         Args:
@@ -23,13 +24,16 @@ class MLPPlanner(nn.Module):
 
         self.n_track = n_track
         self.n_waypoints = n_waypoints
-        self.model = nn.Sequential(
-            nn.Linear(n_track * 4, 64),
+
+        layers = [
+            nn.Linear(n_track * 4, layer_dims[0]),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, n_waypoints * 2),
-        )
+        ]
+        for dim in layer_dims:
+            layers.append(nn.Linear(dim, dim))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(layer_dims[-1], n_waypoints * 2))
+        self.model = nn.Sequential(*layers)
 
     def forward(
         self,
