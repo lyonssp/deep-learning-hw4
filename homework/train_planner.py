@@ -56,15 +56,19 @@ def train(
     global_step = 0
     training_metrics = PlannerMetric()
     validation_metrics = PlannerMetric()
+    metrics = {
+        "train_loss": [],
+    }
 
     # training loop
     for epoch in range(num_epoch):
         # clear metrics at beginning of epoch
         training_metrics.reset()
+        validation_metrics.reset()
 
         model.train()
 
-        for batch in train_data:
+        for batch in val_data:
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             track_left = batch["track_left"]
             track_right = batch["track_right"]
@@ -74,6 +78,7 @@ def train(
             pred = model(track_left, track_right)
 
             training_metrics.add(pred, waypoints, waypoints_mask)
+            metrics["train_loss"].append(loss.item())
 
             loss = loss_fn(pred, waypoints)
             
@@ -98,6 +103,8 @@ def train(
                 validation_metrics.add(pred, waypoints, waypoints_mask) 
 
         # log average train and val accuracy to tensorboard
+        logger.add_scalar("train_loss", torch.as_tensor(metrics["train_loss"]).mean(), global_step)
+
         computed_training_metrics = training_metrics.compute()
         computed_validation_metrics = validation_metrics.compute()
 
@@ -109,16 +116,8 @@ def train(
         epoch_val_longitudinal_error = torch.as_tensor(computed_validation_metrics["longitudinal_error"])
         epoch_val_lateral_error = torch.as_tensor(computed_validation_metrics["lateral_error"])
 
-        logger.add_scalar("l1_error", epoch_train_l1_error, global_step)
-        logger.add_scalar("longitudinal_error", epoch_train_longitudinal_error, global_step)
-        logger.add_scalar("lateral_error", epoch_train_lateral_error, global_step)
-
-        logger.add_scalar("val_l1_error", epoch_val_l1_error, global_step)
-        logger.add_scalar("val_longitudinal_error", epoch_val_longitudinal_error, global_step)
-        logger.add_scalar("val_lateral_error", epoch_val_lateral_error, global_step)
-
         # print on first, last, every 10th epoch
-        if epoch == 0 or epoch == num_epoch - 1 or epoch % 10 == 0:
+        if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
             print(
                 f"Epoch {epoch + 1}/{num_epoch} "
                 f"Train L1 Error: {epoch_train_l1_error:.4f} "
