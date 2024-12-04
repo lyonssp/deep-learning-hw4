@@ -158,12 +158,8 @@ class CNNPlanner(torch.nn.Module):
             in_channels = f
 
         self.encoder = nn.Sequential(*cnn_layers)
+        self.head = nn.Conv2d(in_channels, n_waypoints * 2, kernel_size=1)
         self.global_pool = nn.AdaptiveAvgPool2d(1)
-        self.head = nn.Sequential(
-            nn.Linear(features[-1], 128),
-            nn.ReLU(),
-            nn.Linear(128, n_waypoints * 2),
-        )
 
     def forward(self, image: torch.Tensor, **kwargs) -> torch.Tensor:
         """
@@ -177,9 +173,8 @@ class CNNPlanner(torch.nn.Module):
         x = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
         x = self.encoder(x)
-        x = self.global_pool(x)
-        x = x.view(x.size(0), -1) # flatten
         x = self.head(x)
+        x = self.global_pool(x)
         x = x.view(x.size(0), self.n_waypoints, 2)
         return x
 
