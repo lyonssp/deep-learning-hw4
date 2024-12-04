@@ -19,7 +19,7 @@ if __name__ == '__main__':
             "model_name": "cnn_planner",
             "lr": 1e-3,
             "batch_size": 128,
-            "num_epoch": 20
+            "num_epoch": 50
         }
     ]
     for config in configs:

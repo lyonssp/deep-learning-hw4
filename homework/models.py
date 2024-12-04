@@ -155,13 +155,13 @@ class CNNPlanner(torch.nn.Module):
             cnn_layers.append(nn.BatchNorm2d(f))
             cnn_layers.append(nn.ReLU())
             cnn_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
-            cnn_layers.append(nn.Dropout(0.2))
+            cnn_layers.append(nn.Dropout(0.3))
             in_channels = f
 
         self.encoder = nn.Sequential(*cnn_layers)
-        
+
         self.head = nn.Conv2d(in_channels, n_waypoints * 2, kernel_size=1)
-        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, image: torch.Tensor, **kwargs) -> torch.Tensor:
         """

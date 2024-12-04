@@ -51,7 +51,7 @@ def train(
     val_data = load_data("drive_data/val", shuffle=False)
 
     # create loss function and optimizer
-    loss_fn = torch.nn.L1Loss()
+    loss_fn = torch.nn.L1Loss(reduction="none")
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     global_step = 0
@@ -78,7 +78,10 @@ def train(
             pred = model(img)
             training_metrics.add(pred, waypoints, waypoints_mask)
 
-            loss = loss_fn(pred, waypoints)
+            computed_loss = loss_fn(pred, waypoints)
+            loss_masked = computed_loss * waypoints_mask[..., None]
+            loss = loss_masked.sum() / waypoints_mask.sum()
+            
             metrics["train_loss"].append(loss.item())
 
             optimizer.zero_grad()
