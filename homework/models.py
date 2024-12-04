@@ -145,8 +145,10 @@ class CNNPlanner(torch.nn.Module):
             super().__init__()
             self.conv = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
                 nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
             )
 
@@ -160,12 +162,12 @@ class CNNPlanner(torch.nn.Module):
             out_channels,
         ):
             super().__init__()
-            self.conv = nn.Sequential([
+            self.conv = nn.Sequential(
                 nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
                 nn.ReLU(),
                 nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
                 nn.ReLU(),
-            ])
+            )
 
         def forward(self, x):
             return self.conv(x)
@@ -192,8 +194,7 @@ class CNNPlanner(torch.nn.Module):
             encoder_layers.append(self.EncoderBlock(f, f * 2))
 
         for f in reversed(features):
-            decoder_layers.append(nn.ConvTranspose2d(f * 2, f, kernel_size=3, stride=2, padding=1, output_padding=1))
-            decoder_layers.append(nn.ReLU())
+            decoder_layers.append(self.DecoderBlock(f * 2, f))
 
         self.encoder = nn.Sequential(*encoder_layers)
         self.decoder = nn.Sequential(*decoder_layers)
