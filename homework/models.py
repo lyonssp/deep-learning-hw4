@@ -155,7 +155,7 @@ class CNNPlanner(torch.nn.Module):
             cnn_layers.append(nn.BatchNorm2d(f))
             cnn_layers.append(nn.ReLU())
             cnn_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
-            cnn_layers.append(nn.Dropout(0.3))
+            cnn_layers.append(nn.Dropout(0.5))
             in_channels = f
 
         self.encoder = nn.Sequential(*cnn_layers)
