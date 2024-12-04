@@ -139,6 +139,8 @@ class CNNPlanner(torch.nn.Module):
     def __init__(
         self,
         n_waypoints: int = 3,
+        in_channels: int = 3,
+        features = [32, 64, 128],
     ):
         super().__init__()
 
@@ -146,6 +148,18 @@ class CNNPlanner(torch.nn.Module):
 
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN), persistent=False)
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD), persistent=False)
+
+        cnn_layers = []
+        for f in features:
+            cnn_layers.append(nn.Conv2d(in_channels, f, kernel_size=3, stride=2, padding=1))
+            cnn_layers.append(nn.ReLU())
+            in_channels = f
+
+        cnn_layers.append(nn.Conv2d(f, n_waypoints * 2, kernel_size=1))
+        cnn_layers.append(nn.AdaptiveAvgPool2d(1))
+
+        self.model = nn.Sequential(*cnn_layers)
+
 
     def forward(self, image: torch.Tensor, **kwargs) -> torch.Tensor:
         """
@@ -158,7 +172,9 @@ class CNNPlanner(torch.nn.Module):
         x = image
         x = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
-        raise NotImplementedError
+        output = self.model(x)
+
+        return output.view(image.size(0), self.n_waypoints, 2)
 
 
 MODEL_FACTORY = {

@@ -14,13 +14,14 @@ from .datasets.road_dataset import load_data
 
 def train(
     exp_dir: str = "logs",
-    model_name: str = "mlp_planner",
     num_epoch: int = 100,
     lr: float = 1e-3,
     batch_size: int = 128,
     seed: int = 2024,
     **kwargs,
 ):
+    model_name = "cnn_planner"
+
     if torch.cuda.is_available():
         device = torch.device("cuda")
     else:
@@ -48,7 +49,7 @@ def train(
         transform_pipeline="default"
     )
     val_data = load_data("drive_data/val", shuffle=False)
-    
+
     # create loss function and optimizer
     loss_fn = torch.nn.L1Loss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -70,17 +71,16 @@ def train(
 
         for batch in val_data:
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
-            track_left = batch["track_left"]
-            track_right = batch["track_right"]
+            img = batch["image"]
             waypoints = batch["waypoints"]
             waypoints_mask = batch["waypoints_mask"]
 
-            pred = model(track_left, track_right)
+            pred = model(img)
             training_metrics.add(pred, waypoints, waypoints_mask)
 
             loss = loss_fn(pred, waypoints)
             metrics["train_loss"].append(loss.item())
-            
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -93,13 +93,12 @@ def train(
 
             for batch in train_data:
                 batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
-                track_left = batch["track_left"]
-                track_right = batch["track_right"]
+                img = batch["image"]
                 waypoints = batch["waypoints"]
                 waypoints_mask = batch["waypoints_mask"]
 
-                pred = model(track_left, track_right)
-                validation_metrics.add(pred, waypoints, waypoints_mask) 
+                pred = model(img)
+                validation_metrics.add(pred, waypoints, waypoints_mask)
 
         # log average training loss
         logger.add_scalar("train_loss", torch.as_tensor(metrics["train_loss"]).mean(), global_step)
