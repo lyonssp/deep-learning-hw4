@@ -140,7 +140,7 @@ class CNNPlanner(torch.nn.Module):
         self,
         n_waypoints: int = 3,
         in_channels: int = 3,
-        features = [64, 64, 64],
+        features = [32, 64, 128],
     ):
         super().__init__()
 
@@ -155,7 +155,7 @@ class CNNPlanner(torch.nn.Module):
             cnn_layers.append(nn.BatchNorm2d(f))
             cnn_layers.append(nn.ReLU())
             cnn_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
-            cnn_layers.append(nn.Dropout(0.5))
+            cnn_layers.append(nn.Dropout(0.4))
             in_channels = f
 
         self.encoder = nn.Sequential(*cnn_layers)
