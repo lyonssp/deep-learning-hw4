@@ -115,16 +115,15 @@ def train(
         epoch_val_lateral_error = torch.as_tensor(computed_validation_metrics["lateral_error"])
 
         # print on first, last, every 10th epoch
-        if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
-            print(
-                f"Epoch {epoch + 1}/{num_epoch} "
-                f"Train L1 Error: {epoch_train_l1_error:.4f} "
-                f"Val L1 Error: {epoch_val_l1_error:.4f} "
-                f"Train Longitudinal Error: {epoch_train_longitudinal_error:.4f} "
-                f"Val Longitudinal Error: {epoch_val_longitudinal_error:.4f} "
-                f"Train Lateral Error: {epoch_train_lateral_error:.4f} "
-                f"Val Lateral Error: {epoch_val_lateral_error:.4f}"
-            )
+        print(
+            f"Epoch {epoch + 1}/{num_epoch} "
+            f"Train L1 Error: {epoch_train_l1_error:.4f} "
+            f"Val L1 Error: {epoch_val_l1_error:.4f} "
+            f"Train Longitudinal Error: {epoch_train_longitudinal_error:.4f} "
+            f"Val Longitudinal Error: {epoch_val_longitudinal_error:.4f} "
+            f"Train Lateral Error: {epoch_train_lateral_error:.4f} "
+            f"Val Lateral Error: {epoch_val_lateral_error:.4f}"
+        )
 
     # save and overwrite the model in the root directory for grading
     save_model(model)
