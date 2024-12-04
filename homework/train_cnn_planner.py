@@ -46,7 +46,7 @@ def train(
         shuffle=True,
         batch_size=batch_size,
         num_workers=2,
-        transform_pipeline="default"
+        transform_pipeline="aug"
     )
     val_data = load_data("drive_data/val", shuffle=False)
 
