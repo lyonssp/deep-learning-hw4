@@ -140,7 +140,7 @@ class CNNPlanner(torch.nn.Module):
         self,
         n_waypoints: int = 3,
         in_channels: int = 3,
-        features = [32, 64, 128],
+        features = [64, 128, 256],
     ):
         super().__init__()
 
@@ -152,12 +152,14 @@ class CNNPlanner(torch.nn.Module):
         cnn_layers = []
         for f in features:
             cnn_layers.append(nn.Conv2d(in_channels, f, kernel_size=3, stride=2, padding=1))
+            cnn_layers.append(nn.BatchNorm2d(f))
             cnn_layers.append(nn.ReLU())
+            cnn_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
             in_channels = f
 
-        cnn_layers.append(nn.Conv2d(f, n_waypoints * 2, kernel_size=1))
-        cnn_layers.append(nn.AdaptiveAvgPool2d(1))
-
+        self.encoder = nn.Sequential(*cnn_layers)
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        self.head = nn.Linear(features[-1], n_waypoints * 2)
         self.model = nn.Sequential(*cnn_layers)
 
 
@@ -172,9 +174,12 @@ class CNNPlanner(torch.nn.Module):
         x = image
         x = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
-        output = self.model(x)
-
-        return output.view(image.size(0), self.n_waypoints, 2)
+        x = self.encoder(x)
+        x = self.global_pool(x)
+        x = x.view(x.size(0), -1) # flatten
+        x = self.head(x)
+        x = x.view(x.size(0), self.n_waypoints, 2)
+        return x
 
 
 MODEL_FACTORY = {
