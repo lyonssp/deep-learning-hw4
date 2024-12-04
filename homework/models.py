@@ -147,9 +147,11 @@ class CNNPlanner(torch.nn.Module):
                 nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
+                nn.Dropout2d(0.3),
                 nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
+                nn.Dropout2d(0.3),
             )
 
         def forward(self, x):
