@@ -77,13 +77,29 @@ class TransformerPlanner(nn.Module):
         n_track: int = 10,
         n_waypoints: int = 3,
         d_model: int = 64,
+        num_heads: int = 4,
+        num_layers: int = 2,
     ):
         super().__init__()
 
         self.n_track = n_track
         self.n_waypoints = n_waypoints
 
-        self.query_embed = nn.Embedding(n_waypoints, d_model)
+        self.input_projection = nn.Linear(4, d_model)
+        
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=num_heads,
+            dim_feedforward=4 * d_model,
+            batch_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer,
+            num_layers=num_layers
+        )
+        
+        # Output projection to desired output dimension
+        self.output_projection = nn.Linear(d_model, n_waypoints * 2)
 
     def forward(
         self,
@@ -104,7 +120,19 @@ class TransformerPlanner(nn.Module):
         Returns:
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
-        raise NotImplementedError
+        # Repeat flatenning similar to MLP
+        batch_size, _, _ = track_left.size()
+        combined_input = torch.cat([track_left, track_right], dim=-1)  # (batch_size, 10, 4)
+        
+        input_embedding = self.input_projection(combined_input)  # (batch_size, 10, d_model)
+
+        encoder_output = self.transformer_encoder(input_embedding)  # (batch_size, 10, d_model)
+        
+        pooled_output = encoder_output.mean(dim=1)  # (batch_size, d_model)
+
+        output = self.output_projection(pooled_output)  # (batch_size, 10, 6)
+        
+        return output.view(batch_size, self.n_waypoints, 2)
 
 
 class CNNPlanner(torch.nn.Module):
