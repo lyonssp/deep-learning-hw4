@@ -136,11 +136,45 @@ class TransformerPlanner(nn.Module):
 
 
 class CNNPlanner(torch.nn.Module):
+    class EncoderBlock(nn.Module):
+        def __init__(
+            self,
+            in_channels,
+            out_channels,
+        ):
+            super().__init__()
+            self.conv = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(),
+            )
+
+        def forward(self, x):
+            return self.conv(x)
+
+    class DecoderBlock(nn.Module):
+        def __init__(
+            self,
+            in_channels,
+            out_channels,
+        ):
+            super().__init__()
+            self.conv = nn.Sequential([
+                nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                nn.ReLU(),
+                nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(),
+            ])
+
+        def forward(self, x):
+            return self.conv(x)
+
     def __init__(
         self,
         n_waypoints: int = 3,
         in_channels: int = 3,
-        features = [32, 64, 128],
+        features = [32, 64],
     ):
         super().__init__()
 
@@ -149,18 +183,23 @@ class CNNPlanner(torch.nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN), persistent=False)
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD), persistent=False)
 
-        cnn_layers = []
+        encoder_layers = [
+            nn.Conv2d(in_channels, features[0], kernel_size=3, stride=1, padding=1)
+        ]
+        decoder_layers = []
+
         for f in features:
-            cnn_layers.append(nn.Conv2d(in_channels, f, kernel_size=3, stride=2, padding=1))
-            cnn_layers.append(nn.BatchNorm2d(f))
-            cnn_layers.append(nn.ReLU())
-            cnn_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
-            cnn_layers.append(nn.Dropout(0.4))
-            in_channels = f
+            encoder_layers.append(self.EncoderBlock(f, f * 2))
 
-        self.encoder = nn.Sequential(*cnn_layers)
+        for f in reversed(features):
+            decoder_layers.append(nn.ConvTranspose2d(f * 2, f, kernel_size=3, stride=2, padding=1, output_padding=1))
+            decoder_layers.append(nn.ReLU())
 
-        self.head = nn.Conv2d(in_channels, n_waypoints * 2, kernel_size=1)
+        self.encoder = nn.Sequential(*encoder_layers)
+        self.decoder = nn.Sequential(*decoder_layers)
+
+        self.head = nn.Conv2d(features[0], n_waypoints * 2, kernel_size=1)
+
         self.global_pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, image: torch.Tensor, **kwargs) -> torch.Tensor:
@@ -175,6 +214,7 @@ class CNNPlanner(torch.nn.Module):
         x = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
         x = self.encoder(x)
+        x = self.decoder(x)
         x = self.head(x)
         x = self.global_pool(x)
         x = x.view(x.size(0), self.n_waypoints, 2)
